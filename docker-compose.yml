@@ -1,0 +1,43 @@
+services:
+  server:
+    build: ./server
+    container_name: server
+    hostname: server
+    cap_add:
+      - NET_ADMIN
+    networks:
+      redenet:
+        ipv4_address: 172.28.0.10
+    ports:
+      - "8080:80/tcp"     # HTTP/1.1 puro (baseline TCP sem TLS)
+      - "8443:443/tcp"    # HTTP/2 sobre TLS 1.3 (TCP)
+      - "8443:443/udp"    # HTTP/3 sobre QUIC (UDP)
+      - "5201:5201"   # iperf3 server
+    volumes:
+      - ./results:/results
+    restart: unless-stopped
+
+  client:
+    build: ./client
+    container_name: client
+    hostname: client
+    cap_add:
+      - NET_ADMIN
+    networks:
+      redenet:
+        ipv4_address: 172.28.0.11
+    depends_on:
+      - server
+    volumes:
+      - ./results:/results
+      - ./netem:/netem
+      - ./analysis:/analysis
+    stdin_open: true
+    tty: true
+
+networks:
+  redenet:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24
